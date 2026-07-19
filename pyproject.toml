@@ -1,0 +1,61 @@
+[project]
+name = "lacrei-saude-backend"
+version = "0.1.0"
+description = "API RESTful de Gerenciamento de Consultas Médicas - Lacrei Saúde"
+authors = [
+    {name = "Lacrei Saúde"}
+]
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "django (>=6.0.7,<7.0.0)",
+    "djangorestframework (>=3.17.1,<4.0.0)",
+    "psycopg2-binary (>=2.9.12,<3.0.0)",
+    "django-cors-headers (>=4.9.0,<5.0.0)",
+    "django-filter (>=26.1,<27.0)",
+    "drf-spectacular (>=0.30.0,<0.31.0)",
+    "gunicorn (>=26.0.0,<27.0.0)",
+    "whitenoise (>=6.12.0,<7.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "ruff (>=0.15.22,<0.16.0)",
+    "pylint-django (>=2.8.0,<3.0.0)",
+    "pytest (>=9.1.1,<10.0.0)",
+    "pytest-django (>=4.12.0,<5.0.0)",
+    "pytest-cov (>=7.1.0,<8.0.0)",
+    "factory-boy (>=3.3.3,<4.0.0)"
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = ["migrations", ".venv", "venv", "staticfiles"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]

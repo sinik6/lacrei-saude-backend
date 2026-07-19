@@ -1,0 +1,17 @@
+.env
+.env.*
+*.log
+logs/
+.git/
+.gitignore
+Dockerfile
+docker-compose.yml
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
