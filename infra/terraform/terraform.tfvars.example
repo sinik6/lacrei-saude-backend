@@ -1,0 +1,16 @@
+# Copie para terraform.tfvars e ajuste
+environment = "staging"  # staging ou production
+aws_region  = "us-east-1"
+app_name    = "lacrei-saude-api"
+
+# Staging (padrão)
+ecs_task_cpu       = 256
+ecs_task_memory    = 512
+ecs_desired_count  = 1
+rds_instance_class = "db.t3.micro"
+
+# Production (descomente e ajuste)
+# ecs_task_cpu       = 512
+# ecs_task_memory    = 1024
+# ecs_desired_count  = 2
+# rds_instance_class = "db.t3.small"
