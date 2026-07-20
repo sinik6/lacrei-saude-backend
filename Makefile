@@ -1,4 +1,4 @@
-.PHONY: help test lint build docker-up docker-down deploy
+.PHONY: help test lint
 
 help: ## Mostra esta ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -56,12 +56,3 @@ docker-down: ## Derruba ambiente Docker
 
 docker-logs: ## Logs do container web
 	docker compose -f docker-compose.dev.yml logs -f web
-
-# ── Deploy ───────────────────────────────────────────────────────
-
-deploy: docker-build ## Build e push para AWS (ECS)
-	aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $(ECR)
-	$(eval ECR := $(shell aws ecr describe-repositories --repository-names lacrei-saude-api --query 'repositories[0].repositoryUri' --output text))
-	docker tag lacrei-saude-api:latest $(ECR):$$(git rev-parse --short HEAD)
-	docker push $(ECR):$$(git rev-parse --short HEAD)
-	aws ecs update-service --cluster lacrei-saude-api --service lacrei-saude-api --force-new-deployment
