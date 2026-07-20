@@ -28,7 +28,7 @@ API RESTful para gerenciamento de **profissionais da saúde** e **consultas méd
 
 | Pilar | Implementação |
 |---|---|
-| **Qualidade de código** | Ruff, pytest com 31 testes, tipagem completa |
+| **Qualidade de código** | Ruff, pytest com 34 testes, tipagem completa |
 | **Segurança** | API Key, CORS, HSTS, XSS filter, SQL Injection (ORM) |
 | **Boas práticas** | Multi-stage Docker, 12-Factor App, DRF ViewSets |
 | **Pronto para produção** | Gunicorn, WhiteNoise, logs rotativos, health check |
@@ -328,12 +328,12 @@ poetry run pytest apps/appointments/tests.py::AppointmentAPITestCase::test_creat
 
 ### Cobertura
 
-**31 testes**, distribuídos em:
+**34 testes**, distribuídos em:
 
 | Módulo | Testes | Cobertura |
 |---|---|---|
-| `apps/professionals/tests.py` | 12 | CRUD completo + erros |
-| `apps/appointments/tests.py` | 14 | CRUD completo + erros + cascade |
+| `apps/professionals/tests.py` | 13 | CRUD completo + erros + sanitização |
+| `apps/appointments/tests.py` | 16 | CRUD completo + erros + cascade + unicidade |
 | `apps/users/tests.py` | 5 | Autenticação (válida, inválida, inativa, ausente, múltiplos endpoints) |
 
 **Tipos de teste:**

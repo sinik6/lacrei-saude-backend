@@ -1,4 +1,5 @@
 import os
+from contextlib import suppress
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -157,7 +158,8 @@ SPECTACULAR_SETTINGS = {
 
 # --- Logging ---
 LOGS_DIR = BASE_DIR / "logs"
-LOGS_DIR.mkdir(exist_ok=True)
+with suppress(OSError):
+    LOGS_DIR.mkdir(exist_ok=True)
 
 LOGGING = {
     "version": 1,
@@ -173,25 +175,47 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
+        "file_access": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOGS_DIR / "access.log",
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+        "file_app": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOGS_DIR / "app.log",
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+        "file_error": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOGS_DIR / "error.log",
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
+            "formatter": "verbose",
+            "level": "ERROR",
+        },
     },
     "loggers": {
         "django": {
-            "handlers": ["console"],
+            "handlers": ["console", "file_error"],
             "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
             "propagate": False,
         },
         "django.request": {
-            "handlers": ["console"],
+            "handlers": ["console", "file_error"],
             "level": "ERROR",
             "propagate": False,
         },
         "apps": {
-            "handlers": ["console"],
+            "handlers": ["console", "file_app"],
             "level": "INFO",
             "propagate": False,
         },
         "access": {
-            "handlers": ["console"],
+            "handlers": ["console", "file_access"],
             "level": "INFO",
             "propagate": False,
         },
