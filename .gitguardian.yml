@@ -1,0 +1,18 @@
+# GitGuardian — falsos positivos documentados
+# Todas as ocorrências abaixo são credenciais padrão de desenvolvimento local/CI,
+# nunca utilizadas em produção.
+
+secrets:
+  ignored-matches:
+    # CI/CD — senha padrão do banco de testes
+    - name: "CI test database password"
+      match: "lacrei"
+      paths:
+        - ".github/workflows/*.yml"
+
+    # Docker Compose — credenciais locais de desenvolvimento
+    - name: "Docker Compose local dev credentials"
+      match: "postgres"
+      paths:
+        - "docker-compose.yml"
+        - "docker-compose.dev.yml"
