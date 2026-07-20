@@ -1,0 +1,39 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente para rollback"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  rollback:
+    name: Rollback ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Rollback ECS
+        run: |
+          CLUSTER="lacrei-saude-api-${{ github.event.inputs.environment }}"
+          SERVICE="lacrei-saude-api-${{ github.event.inputs.environment }}"
+          PREV_TASK_DEF=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query 'services[0].taskDefinition' --output text | sed 's/:[0-9]*$//')
+          LATEST_REVISION=$(aws ecs describe-task-definition --task-definition "$PREV_TASK_DEF" --query 'taskDefinition.revision' --output text)
+          if [ "$LATEST_REVISION" -gt 1 ]; then
+            aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --task-definition "${PREV_TASK_DEF}:$((LATEST_REVISION - 1))" --force-new-deployment
+            aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE"
+            echo "Rollback concluído para revisão $((LATEST_REVISION - 1))"
+          else
+            echo "Nenhuma revisão anterior para rollback"
+          fi

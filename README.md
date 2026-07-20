@@ -10,14 +10,15 @@ API voltada à comunidade LGBTQIAPN+, desenvolvida com **Django 6** + **Django R
 2. [Tecnologias](#tecnologias)
 3. [Setup Local](#setup-local)
 4. [Setup com Docker](#setup-com-docker)
-5. [Endpoints da API](#endpoints-da-api)
-6. [Autenticação](#autenticação)
-7. [Execução dos Testes](#execução-dos-testes)
-8. [CI/CD — Fluxo de Deploy](#cicd--fluxo-de-deploy)
-9. [Estratégia de Rollback](#estratégia-de-rollback)
-10. [Decisões Técnicas](#decisões-técnicas)
-11. [Proposta de Integração — Assas](#proposta-de-integração--assas)
-12. [Melhorias Futuras](#melhorias-futuras)
+5. [Evidências dos Ambientes](#evidências-dos-ambientes)
+6. [Endpoints da API](#endpoints-da-api)
+7. [Autenticação](#autenticação)
+8. [Execução dos Testes](#execução-dos-testes)
+9. [CI/CD](#cicd)
+10. [Rollback](#rollback)
+11. [Decisões Técnicas](#decisões-técnicas)
+12. [Proposta de Integração — Assas](#proposta-de-integração--assas)
+13. [Melhorias Futuras](#melhorias-futuras)
 
 ---
 
@@ -121,35 +122,25 @@ poetry run python manage.py runserver
 ### Ambiente de Desenvolvimento (hot reload)
 
 ```bash
-# Inicia banco PostgreSQL + servidor com hot reload
 docker compose -f docker-compose.dev.yml up --build
-
-# A API estará disponível em http://localhost:8000
-
-# Criar API Key dentro do container
-docker compose -f docker-compose.dev.yml exec web python manage.py create_api_key --nome "docker-key"
-
-# Popular banco com dados de exemplo
-docker compose -f docker-compose.dev.yml exec web python manage.py seed
 ```
 
-### Ambiente de Produção (Gunicorn + PostgreSQL)
+### Ambiente de Produção (Gunicorn)
 
 ```bash
-# Build e start dos serviços
 docker compose up --build -d
+```
 
-# Verificar logs
-docker compose logs -f web
+### Verificar
 
-# Health check
+```bash
 curl http://localhost:8000/api/v1/health/
 ```
 
 ### Estrutura Docker
 
 ```
-docker-compose.yml         # Produção (Gunicorn, 3 workers)
+docker-compose.yml         # Ambiente padrão (Gunicorn, 3 workers)
 docker-compose.dev.yml     # Desenvolvimento (runserver, hot reload)
 Dockerfile                 # Multi-stage build (builder + production)
 docker/postgres-init/      # Scripts de inicialização do PostgreSQL
@@ -159,6 +150,47 @@ docker/postgres-init/      # Scripts de inicialização do PostgreSQL
 **Padrão Vinculus aplicado:** Dois usuários de banco:
 - `postgres` (superusuário) — usado apenas pelo container PostgreSQL
 - `lacrei_app` (não-superusuário) — usado pela aplicação em runtime
+
+---
+
+## Evidências dos Ambientes
+
+### Ambiente Local (Docker)
+
+```bash
+$ curl -s http://localhost:8000/api/v1/health/ | python -m json.tool
+{
+    "status": "ok",
+    "versao": "1.0.0",
+    "servico": "lacrei-saude-api",
+    "database": "connected"
+}
+```
+
+### Ambiente de CI (GitHub Actions)
+
+Pipeline executado a cada push/PR — **lint + 34 testes contra PostgreSQL real:**
+
+```
+Push/PR → [Lint: Ruff] → [Test: PostgreSQL + pytest + cobertura]
+```
+
+**Última execução:** https://github.com/sinik6/lacrei-saude-backend/actions
+
+### Simulando Produção Local
+
+```bash
+# Subir em modo produção (Gunicorn, DEBUG=False)
+docker compose up --build -d
+
+# Health check
+curl http://localhost:8000/api/v1/health/
+
+# Swagger
+open http://localhost:8000/api/v1/docs/swagger/
+```
+
+> Para deploy real em staging/production, configurar secrets AWS no GitHub Actions (ver seção CI/CD).
 
 ---
 
@@ -314,113 +346,54 @@ poetry run pytest apps/appointments/tests.py::AppointmentAPITestCase::test_creat
 
 ---
 
-## CI/CD — Fluxo de Deploy
+## CI/CD
 
 ### Pipeline (GitHub Actions)
 
 ```
-Push/PR → [Lint] → [Test] → [Build Docker] → [Deploy Staging] → [Deploy Production]
+Push/PR → [Lint] → [Test] → [Build Docker] → [Deploy Staging ou Production]
 ```
-
-### Estágios
 
 | Job | Gatilho | Descrição |
 |---|---|---|
 | **lint** | push, PR | Ruff check + format |
-| **test** | push, PR | Migrações + pytest + cobertura (Codecov) |
-| **build** | main, develop | Build multi-stage Docker e upload como artifact |
-| **deploy-staging** | develop | Push ECR → Deploy ECS → Wait stable |
-| **deploy-production** | main | Push ECR → Deploy ECS (Blue/Green) → Wait stable |
+| **test** | push, PR | Migrações + APITestCase com PostgreSQL real |
+| **build** | main, develop | Build multi-stage Docker |
+| **deploy-staging** | develop | Push ECR → Deploy ECS |
+| **deploy-production** | main | Push ECR → Deploy ECS |
 
 ### Ambientes
 
-| Ambiente | Branch | URL |
-|---|---|---|
-| **Staging** | `develop` | ECS: `lacrei-staging` |
-| **Produção** | `main` | ECS: `lacrei-production` |
-
-### Sequência de Deploy AWS
-
-1. **Build:** Docker image multi-stage → artifact
-2. **ECR Push:** `lacrei-saude-api:staging-{sha}` ou `production-{sha}`
-3. **ECS Deploy:** Atualiza o service com `--force-new-deployment`
-4. **Wait:** Aguarda `services-stable` (health check passa)
-5. **Health Check:** `curl http://.../api/v1/health/`
-
-### Secrets e Variáveis no GitHub
-
-| Secret/Variable | Propósito |
+| Ambiente | Branch |
 |---|---|
-| `AWS_ACCESS_KEY_ID_STAGING` | Credencial AWS (staging) |
-| `AWS_SECRET_ACCESS_KEY_STAGING` | Credencial AWS (staging) |
-| `AWS_ACCESS_KEY_ID_PRODUCTION` | Credencial AWS (produção) |
-| `AWS_SECRET_ACCESS_KEY_PRODUCTION` | Credencial AWS (produção) |
-| `AWS_ECR_REGISTRY` | URI do ECR |
-| `POSTGRES_USER` | Usuário para testes CI |
-| `POSTGRES_PASSWORD` | Senha para testes CI |
+| **Staging** | `develop` |
+| **Produção** | `main` |
 
----
+### Rollback
 
-## Estratégia de Rollback
+**GitHub Actions:** GitHub → Actions → Rollback → Run workflow → selecionar ambiente. O script detecta a revisão anterior do ECS e reverte automaticamente.
 
-### 1. Revert via GitHub Actions (Recomendado)
-
-Utilizar o workflow `rollback-staging` ou `rollback-production`, configurado como `workflow_dispatch`:
-
-```
-GitHub UI → Actions → "Rollback Staging" → Run workflow
-```
-
-O script automaticamente detecta a revisão anterior da task definition do ECS e faz o rollback:
-
+**Git Revert:**
 ```bash
-PREV_TASK_DEF=$(aws ecs describe-services --cluster lacrei-staging ...)
-LATEST_REVISION=$(aws ecs describe-task-definition ...)
-aws ecs update-service --task-definition "${PREV_TASK_DEF}:$((LATEST_REVISION - 1))"
-```
-
-### 2. Git Revert Manual
-
-```bash
-# Encontrar o commit do último deploy funcional
-git log --oneline -10
-
-# Reverter para o commit funcional
 git revert <commit-com-problema>
-git push origin main  # Dispara o pipeline automaticamente
+git push origin main
 ```
 
-### 3. Blue/Green Deploy (ECS)
+**Blue/Green no ECS:** No deploy de produção, nova versão (green) sobe ao lado da antiga (blue). Health check falhou → tráfego permanece na blue (zero downtime).
 
-Configurado no ECS via `deploymentController.type = CODE_DEPLOY`:
+### Secrets no GitHub
 
-- Nova versão (green) sobe ao lado da antiga (blue)
-- Testes de health check rodam na versão green
-- Se saudável: tráfego migra gradualmente para green
-- Se falha: tráfego permanece em blue (zero downtime)
+Settings → Environments → criar `staging` e `production` com:
 
-### 4. Preview Deploy (Bônus)
+| Secret | Propósito |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | Credencial AWS |
+| `AWS_SECRET_ACCESS_KEY` | Credencial AWS |
+| `AWS_ECR_REGISTRY` | URI do ECR |
 
-Para PRs abertas, um ambiente preview pode ser criado automaticamente:
+Ver também: [docs/DEPLOY.md](docs/DEPLOY.md)
 
-```yaml
-# .github/workflows/preview.yml
-name: Preview Deploy
-on: [pull_request]
-jobs:
-  deploy-preview:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy preview to ECS
-        run: |
-          # Deploy com sufixo do número da PR
-          aws ecs update-service --cluster lacrei-preview \
-            --service "lacrei-api-pr-${{ github.event.number }}" \
-            --force-new-deployment
-```
 
-**Limpeza automática:** Webhook `pull_request.closed` destrói o ambiente preview.
 
 ---
 
