@@ -27,10 +27,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DJANGO_DEBUG: "True"
-      DJANGO_SECRET_KEY: "dev-secret-key"
+      DJANGO_DEBUG: "False"
+      DJANGO_SECRET_KEY: "change-this-in-production"
       DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,web"
-      DJANGO_LOG_LEVEL: DEBUG
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       POSTGRES_DB: lacrei
@@ -43,12 +42,11 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - .:/app
       - ./logs:/app/logs
     command: >
       sh -c "python manage.py migrate --noinput &&
-             python manage.py create_api_key --nome dev-auto-key 2>/dev/null || true &&
-             python manage.py runserver 0.0.0.0:8000"
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --access-logfile - --error-logfile -"
 
 volumes:
   postgres_data:

@@ -1,20 +1,7 @@
-from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
 from apps.users.models import ApiKey
-
-
-class ApiKeyAuthenticationScheme(OpenApiAuthenticationExtension):
-    target_class = "apps.users.authentication.ApiKeyAuthentication"
-    name = "ApiKeyAuth"
-
-    def get_security_definition(self, auto_schema):
-        return {
-            "type": "apiKey",
-            "in": "header",
-            "name": "X-API-Key",
-        }
 
 
 class ApiKeyAuthentication(BaseAuthentication):
