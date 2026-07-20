@@ -34,6 +34,7 @@ jobs:
     needs: lint
     env:
       DJANGO_SETTINGS_MODULE: config.settings
+      DJANGO_DEBUG: "True"
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"
       POSTGRES_DB: lacrei_test
